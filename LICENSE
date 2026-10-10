@@ -1,0 +1,21 @@
+Spark Hub Binary License
+
+Copyright (c) 2026 Unlocked Spark Foundation. All rights reserved.
+
+Spark Hub is free of charge. You may download, install and use the binaries
+published in this repository, on any number of devices, for personal and
+non-commercial purposes, and you may share the install commands and links
+to this repository with others.
+
+You may not sell, rent or sublicense the binaries, bundle them with other
+software for distribution, or present them as your own. You may not reverse
+engineer, decompile or disassemble the binaries except to the extent that
+applicable law expressly permits.
+
+The binaries are provided "as is", without warranty of any kind, and the
+Unlocked Spark Foundation is not liable for any damages arising from their
+use, to the extent permitted by law. Games installed through Spark Hub are
+the work of their respective creators and come under their own terms.
+
+The binaries embed the Node.js runtime; its notices are in
+LICENSE-THIRD-PARTY.txt inside every release.

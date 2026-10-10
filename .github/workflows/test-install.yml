@@ -1,0 +1,55 @@
+name: Test install scripts
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the nightly build with the script
+        run: sh install.sh --channel nightly
+      - name: The binary runs from the install directory
+        run: ~/.local/bin/sparkhub --version && ~/.local/bin/sparkhub help | head -3
+      - name: Uninstall
+        run: sh install.sh --uninstall && test ! -e ~/.local/bin/sparkhub
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the nightly build with the script
+        shell: pwsh
+        run: ./install.ps1 -Channel nightly
+      - name: The binary runs from the install directory
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:LOCALAPPDATA "Programs\SparkHub\sparkhub.exe"
+          & $exe --version
+          & $exe help | Select-Object -First 3
+      - name: Piping the script into iex also works
+        shell: pwsh
+        run: |
+          $env:SPARKHUB_CHANNEL = "nightly"
+          Get-Content ./install.ps1 -Raw | Invoke-Expression
+      - name: Uninstall
+        shell: pwsh
+        run: |
+          ./install.ps1 -Uninstall
+          if (Test-Path (Join-Path $env:LOCALAPPDATA "Programs\SparkHub\sparkhub.exe")) { throw "still installed" }
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux gets a clear message instead of a broken install
+        run: |
+          set +e
+          out=$(sh install.sh 2>&1); code=$?
+          echo "$out"
+          test $code -eq 1 && echo "$out" | grep -q "Linux is planned"
