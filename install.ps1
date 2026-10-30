@@ -18,6 +18,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+# The progress bar of Invoke-WebRequest is drawn in place, so screen readers never announce it.
+$ProgressPreference = "SilentlyContinue"
 $Repo = "unlocked-spark/sparkhub-releases"
 $Asset = "sparkhub-windows-x64.exe"
 $Target = Join-Path $InstallDir "sparkhub.exe"
@@ -25,6 +27,42 @@ $Target = Join-Path $InstallDir "sparkhub.exe"
 function Fail([string]$Message) {
   Write-Host "sparkhub installer: $Message"
   exit 1
+}
+
+# Downloads with one progress line every 10 percent, at most once every 5 seconds,
+# so a screen reader reads each step as a normal line.
+function Save-Download([string]$Uri, [string]$OutFile) {
+  $request = [Net.HttpWebRequest]::Create($Uri)
+  $request.UserAgent = "sparkhub-installer"
+  $response = $request.GetResponse()
+  try {
+    $total = $response.ContentLength
+    if ($total -gt 0) { Write-Host ("Size {0:N1} MB." -f ($total / 1MB)) }
+    $in = $response.GetResponseStream()
+    $out = [IO.File]::Create($OutFile)
+    try {
+      $buffer = New-Object byte[] 65536
+      $done = 0
+      $nextStep = 10
+      $lastReport = Get-Date
+      while (($read = $in.Read($buffer, 0, $buffer.Length)) -gt 0) {
+        $out.Write($buffer, 0, $read)
+        $done += $read
+        if ($total -le 0) { continue }
+        $percent = [int][Math]::Floor($done * 100 / $total)
+        if ($percent -ge $nextStep -and $percent -lt 100 -and ((Get-Date) - $lastReport).TotalSeconds -ge 5) {
+          Write-Host "Downloaded $percent percent."
+          $lastReport = Get-Date
+          $nextStep = ([Math]::Floor($percent / 10) + 1) * 10
+        }
+      }
+    } finally {
+      $out.Dispose()
+      $in.Dispose()
+    }
+  } finally {
+    $response.Close()
+  }
 }
 
 function Get-UserPath {
@@ -63,7 +101,7 @@ New-Item -ItemType Directory -Path $work | Out-Null
 try {
   Write-Host "Downloading $Asset from $base"
   try {
-    Invoke-WebRequest -UseBasicParsing -Uri "$base/$Asset" -OutFile (Join-Path $work $Asset)
+    Save-Download "$base/$Asset" (Join-Path $work $Asset)
     Invoke-WebRequest -UseBasicParsing -Uri "$base/$Asset.sha256" -OutFile (Join-Path $work "$Asset.sha256")
   } catch {
     Fail "Download failed: $($_.Exception.Message). If no release exists yet, set SPARKHUB_CHANNEL=nightly and try again."
